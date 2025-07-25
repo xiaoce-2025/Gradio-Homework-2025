@@ -147,29 +147,10 @@ with gr.Blocks(title="智能助手应用", css=".panel {border-radius: 10px; pad
         return [gr.update(visible=page_idx==i) for i in range(5)]
     
     # 聊天页面的事件
-    # 添加缺失的聊天响应函数
-    def respond(message, history):
-        """处理用户消息并返回AI的流式响应"""
-        # 初始化AI回复为空
-        history = history.copy()  # 创建副本避免直接修改原始状态
-        history.append((message, ""))  # 添加新消息（AI回复为空）
-        
-        # 第一次更新：显示用户消息和空白的AI回复
-        yield "", history, history
-        
-        full_response = ""
-        # 调用LLM_response生成器获取流式响应
+    from YanxxDialog import Yanxx_respond
 
-        from YanxxDialog import LLM_response
-        for token in LLM_response(message, history[:-1]):  # 传入当前消息前的历史
-            full_response = token
-            # 更新最后一条AI回复内容
-            history[-1] = (message, full_response)
-            yield "", history, history
-
-    
     msg.submit(
-        respond,
+        Yanxx_respond,
         inputs=[msg, chat_history],  # 输入：消息内容，聊天历史
         outputs=[msg, chatbot, chat_history]  # 输出：清空输入框，更新聊天框，更新历史状态
     )

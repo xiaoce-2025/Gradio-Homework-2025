@@ -125,3 +125,146 @@ class AutoExtract:
                     "comment": content['comment']
                 })
         return result
+
+
+def process_ocr(file):
+    try:
+        if file is None:
+            return "请先选择图片文件！"
+        
+        # 中文路径兼容性处理
+        if isinstance(file, str):
+            # 处理Gradio返回的Windows中文路径
+            try:
+                # 尝试直接打开中文路径
+                with open(file, "rb") as f:
+                    content = f.read()
+            except UnicodeEncodeError:
+                # 使用UTF-8编码处理路径
+                with open(file.encode('utf-8'), "rb") as f:
+                    content = f.read()
+        else:
+            # 从文件对象读取内容
+            content = file.read() if hasattr(file, "read") else file
+        
+        # 创建临时文件（自动处理中文）
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
+            # 确保使用正确的二进制写入
+            tmp_file.write(content)
+            file_path = tmp_file.name
+        
+        # OCR处理
+        ocr_text = TextOCR.ocr_processing(file_path)
+        
+        # 清理临时文件
+        try:
+            os.unlink(file_path)
+        except Exception as e:
+            logging.warning(f"临时文件删除失败: {str(e)}")
+        
+        return ocr_text
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        logging.error(f"OCR处理错误: {str(e)}\n{error_detail}")
+        return f"OCR处理错误: {str(e)}"
+        
+def extract_excerpts(text, config):
+    if not text:
+        return [], "请输入需要摘抄的文本！"
+    
+    try:
+        excerpts = AutoExtract.AI_Auto_Extract(config, text)
+        
+        # 生成HTML展示
+        html_content = "<div class='excerpts-list'>"
+        for idx, excerpt in enumerate(excerpts):
+            html_content += f"""
+            <div class='excerpt-item' style='margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);'>
+                <div class='sentence-box' style='display: flex; align-items: center; margin-bottom: 10px;'>
+                    <span class='sentence-num' style='background: #2196F3; color: white; padding: 2px 8px; border-radius: 4px; margin-right: 10px;'>#{idx+1}</span>
+                    <p class='sentence-text' style='margin: 0;'>{excerpt['sentence']}</p>
+                </div>
+                <textarea class='comment-input' style='width: 95%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; min-height: 80px; resize: vertical;'>{excerpt['comment']}</textarea>
+            </div>
+            """
+        html_content += "</div>"
+        
+        return html_content, excerpts
+    except Exception as e:
+        return f"<div class='error'>摘抄处理失败: {str(e)}</div>", []
+    
+def export_excerpts(excerpts, format_choice="TXT"):
+    if not excerpts:
+        return "没有摘抄内容可导出！", None
+    
+    # 生成TXT内容
+    def generate_txt_content():
+        content = "摘抄内容\n"
+        content += "="*50 + "\n\n"
+        for idx, excerpt in enumerate(excerpts):
+            content += f"{idx+1}. {excerpt['sentence']}\n"
+            if excerpt.get('comment'):
+                content += f"   点评：{excerpt['comment']}\n"
+            content += "\n"
+        return content
+    
+    # 生成Markdown内容
+    def generate_markdown_content():
+        content = "# 摘抄内容\n\n"
+        for idx, excerpt in enumerate(excerpts):
+            content += f"## {idx+1}. {excerpt['sentence']}\n\n"
+            if excerpt.get('comment'):
+                content += f"**点评：** {excerpt['comment']}\n\n"
+            content += "---\n\n"
+        return content
+    
+    # 生成Word内容（HTML格式）
+    def generate_word_content():
+        content = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>摘抄内容</title>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                .excerpt { margin-bottom: 20px; }
+                .sentence { font-weight: bold; }
+                .comment { margin-left: 20px; }
+            </style>
+        </head>
+        <body>
+            <h1>摘抄内容</h1>
+        """
+        
+        for idx, excerpt in enumerate(excerpts):
+            content += f"""
+            <div class="excerpt">
+                <p class="sentence">{idx+1}. {excerpt['sentence']}</p>
+                <p class="comment">{excerpt.get('comment', '')}</p>
+            </div>
+            """
+        
+        content += "</body></html>"
+        return content
+    
+    # 根据选择生成内容
+    if format_choice == "TXT":
+        content = generate_txt_content()
+        filename = "excerpts.txt"
+    elif format_choice == "Markdown":
+        content = generate_markdown_content()
+        filename = "excerpts.md"
+    elif format_choice == "Word":
+        content = generate_word_content()
+        filename = "excerpts.html"
+    
+    # 创建临时文件
+    temp_dir = tempfile.mkdtemp()
+    file_path = os.path.join(temp_dir, filename)
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    
+    # 返回状态消息和文件对象（Gradio会自动处理下载）
+    return f"导出成功！点击下方链接下载", file_path
