@@ -24,7 +24,7 @@ def LLM_response(message, history):
             messages.append({"role": "user", "content": human})
         if (assistant):
             messages.append({"role": "assistant", "content": assistant})
-    #messages.append({"role": "user", "content": message})
+    messages.append({"role": "user", "content": message})
 
     headers = {
         "Authorization": f"Bearer {SILICONFLOW_API_KEY}",
@@ -42,6 +42,8 @@ def LLM_response(message, history):
     logging.info(SILICONFLOW_API_KEY)
     logging.info(MODEL_NAME)
     logging.info("LLM已转发提交")
+    logging.info(str(messages))
+
     try:
         with requests.post(
             SILICONFLOW_API_URL,
@@ -185,10 +187,29 @@ with gr.Blocks(title="智能助手应用", css=".panel {border-radius: 10px; pad
         return [gr.update(visible=page_idx==i) for i in range(5)]
     
     # 聊天页面的事件
+    # 添加缺失的聊天响应函数
+    def respond(message, history):
+        """处理用户消息并返回AI的流式响应"""
+        # 初始化AI回复为空
+        history = history.copy()  # 创建副本避免直接修改原始状态
+        history.append((message, ""))  # 添加新消息（AI回复为空）
+        
+        # 第一次更新：显示用户消息和空白的AI回复
+        yield "", history, history
+        
+        full_response = ""
+        # 调用LLM_response生成器获取流式响应
+        for token in LLM_response(message, history[:-1]):  # 传入当前消息前的历史
+            full_response = token
+            # 更新最后一条AI回复内容
+            history[-1] = (message, full_response)
+            yield "", history, history
+
+    
     msg.submit(
         respond,
-        inputs=[msg, chat_history],
-        outputs=[msg, chatbot]
+        inputs=[msg, chat_history],  # 输入：消息内容，聊天历史
+        outputs=[msg, chatbot, chat_history]  # 输出：清空输入框，更新聊天框，更新历史状态
     )
     
     clear_btn.click(
@@ -231,10 +252,6 @@ with gr.Blocks(title="智能助手应用", css=".panel {border-radius: 10px; pad
     settings_btn.click(lambda: [4, *show_page(4)], outputs=[current_page, home_container, feature1_container, feature2_container, yan_container, settings_container])
     
     # 登出事件
-    logout_btn.click(
-        lambda: [-1, "请登录", *[gr.update(visible=False) for _ in range(5)]],
-        outputs=[current_page, content_area, home_container, feature1_container, feature2_container, yan_container, settings_container]
-    )
     
     # 初始加载显示首页
     demo.load(lambda: [gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)],
