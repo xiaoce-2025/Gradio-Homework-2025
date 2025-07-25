@@ -8,10 +8,30 @@ SILICONFLOW_API_KEY = conf.get_text_model_config()["api_key"]
 SILICONFLOW_API_URL = "https://api.siliconflow.cn/v1/chat/completions"
 MODEL_NAME = conf.get_text_model_config()["name"]
 
+from Yanxxdatabase import YanxxDataBase
+
 def LLM_response(message, history):
     """流式生成响应的生成器函数"""
+    # 加载知识库
+    Yanxxdb = YanxxDataBase()
+    Yanxx_knowledge_base_info = {
+        "自我介绍": Yanxxdb.get("严小希自我介绍"),
+        "发型": Yanxxdb.get("严小希发型"),
+        "眼睛": Yanxxdb.get("严小希眼睛"),
+        "服装": Yanxxdb.get("严小希服装"),
+        "性格": Yanxxdb.get("严小希性格"),
+        "作品": Yanxxdb.get("严小希作品"),
+        "高三物理老师": Yanxxdb.get("泡泡老师")
+    }
+    knowledge_base_str = ""
+    for key, value in Yanxx_knowledge_base_info.items():
+        if value:
+            knowledge_base_str += f"{key}: {value}\n"
+    messages = [
+    {"role": "system", "content": f"你是严小希，用户将和你对话。以下是关于你(严小希)的一些信息：\n{knowledge_base_str}"}
+    ]
+
     # 构建消息历史
-    messages = []
     for human, assistant in history:
         if (human):
             messages.append({"role": "user", "content": human})
