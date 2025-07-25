@@ -34,7 +34,7 @@ def LLM_response(message, history):
     logging.info(SILICONFLOW_API_URL)
     logging.info(SILICONFLOW_API_KEY)
     logging.info(MODEL_NAME)
-    logging.info("LLM已转发提交")
+    logging.debug("LLM已转发提交")
     logging.info(str(messages))
 
     try:
@@ -64,8 +64,14 @@ def LLM_response(message, history):
                                 delta = choices[0].get("delta", {})
                                 content = delta.get("reasoning_content", "")
                                 if content:
+                                    # if (len(content)>=1):
+                                    #     if (len(accumulated_text)>=1 and accumulated_text[-1]=="*"):
+                                    #         content = content + "*"
+                                    #         accumulated_text = accumulated_text[:-1]
+                                    #     else:
+                                    #         content = "*" + content + "*"
                                     accumulated_text += content
-                                    #logging.info(f"收到思考内容{content}")
+                                    logging.info(f"收到思考内容{content}")
                                     yield accumulated_text
                         except Exception as e:
                             # 解析错误时继续处理下一个chunk
@@ -80,10 +86,29 @@ def LLM_response(message, history):
                                 content = delta.get("content", "")
                                 if content:
                                     accumulated_text += content
-                                    #logging.info(f"收到回复内容{content}")
+                                    logging.info(f"收到回复内容{content}")
                                     yield accumulated_text
                         except Exception as e:
                             # 解析错误时继续处理下一个chunk
                             continue
     except Exception as e:
         yield f"请求失败: {str(e)}"
+
+
+# 添加缺失的聊天响应函数
+def Yanxx_respond(message, history):
+    """处理用户消息并返回AI的流式响应"""
+    # 初始化AI回复为空
+    history = history.copy()  # 创建副本避免直接修改原始状态
+    history.append((message, ""))  # 添加新消息（AI回复为空）
+    
+    # 第一次更新：显示用户消息和空白的AI回复
+    yield "", history, history
+    
+    full_response = ""
+    # 调用LLM_response生成器获取流式响应
+    for token in LLM_response(message, history[:-1]):  # 传入当前消息前的历史
+        full_response = token
+        # 更新最后一条AI回复内容
+        history[-1] = (message, full_response)
+        yield "", history, history
