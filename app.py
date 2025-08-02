@@ -29,7 +29,7 @@ def yan_page_html():
     return Yanxx_Page()
 
 # 创建 Gradio 界面
-with gr.Blocks(title="智能助手应用", css=".panel {border-radius: 10px; padding: 15px;}") as demo:
+with gr.Blocks(title="严小希", css=".panel {border-radius: 10px; padding: 15px;}") as demo:
     # 状态变量
     username = gr.State("cxxdgc")
     current_page = gr.State(0)
@@ -60,11 +60,11 @@ with gr.Blocks(title="智能助手应用", css=".panel {border-radius: 10px; pad
             # 页面容器
             with gr.Column(visible=True, elem_classes="panel") as home_container:
                 # 聊天界面
-                gr.Markdown("## 智能助手聊天界面")
-                gr.Markdown("与AI助手交流，提问问题或进行对话")
+                gr.Markdown("## 你好呀~我是严小希")
+                gr.Markdown("与严小希交流...")
                 
-                chatbot = gr.Chatbot(height=500, label="AI助手")
-                msg = gr.Textbox(label="请输入消息", placeholder="输入您的问题后按Enter发送...")
+                chatbot = gr.Chatbot(height=500, label="严小希对话")
+                msg = gr.Textbox(label="请输入消息", placeholder="输入您的对话后按Enter发送...")
                 with gr.Row():
                     clear_btn = gr.Button("清空对话")
                     file_upload = gr.UploadButton("📁 上传文件", file_types=["text", ".json", ".pdf", ".docx"])
@@ -73,7 +73,7 @@ with gr.Blocks(title="智能助手应用", css=".panel {border-radius: 10px; pad
             # 自动批注页面
             with gr.Column(visible=False, elem_classes="panel") as feature1_container:
                 gr.Markdown("## 自动批注功能")
-                gr.Markdown("上传文本或文档，系统会自动添加批注")
+                gr.Markdown("由于网络安全问题，该功能正在上线校验中，暂时不可使用~")
                 
                 with gr.Row():
                     text_input = gr.Textbox(label="输入文本", lines=10, placeholder="在此输入要批注的文本...")
@@ -127,6 +127,7 @@ with gr.Blocks(title="智能助手应用", css=".panel {border-radius: 10px; pad
             # 设置页面
             with gr.Column(visible=False, elem_classes="panel") as settings_container:
                 gr.Markdown("## 系统设置")
+                gr.Markdown("由于网络安全问题，该正在上线校验中，暂时不可使用~")
                 
                 with gr.Row():
                     with gr.Column(min_width=300):
@@ -138,6 +139,7 @@ with gr.Blocks(title="智能助手应用", css=".panel {border-radius: 10px; pad
                         gr.Markdown("### AI设置")
                         ai_temperature = gr.Slider(minimum=0, maximum=1, step=0.1, value=0.7, label="创造力")
                         ai_max_tokens = gr.Slider(minimum=100, maximum=2000, step=100, value=1024, label="最大生成长度")
+                        ai_key = gr.Textbox(label="硅基流动api",placeholder="请输入硅基流动api",lines=1)
                 
                 save_btn = gr.Button("保存设置")
                 status = gr.Markdown("")
