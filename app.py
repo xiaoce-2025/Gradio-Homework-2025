@@ -29,45 +29,13 @@ def yan_page_html():
     return Yanxx_Page()
 
 # 创建 Gradio 界面
-with gr.Blocks(
-    title="严小希", 
-    css="""
-        /* 全局样式覆盖 */
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-        #component-0, .app {
-            max-width: none !important;
-            min-height: 100vh;
-            margin: 0;
-            padding: 0;
-        }
-        .contain { /* Gradio 的主要容器 */
-            max-width: none !important;
-            min-width: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-        .panel {
-            border-radius: 10px; 
-            padding: 15px;
-        }
-        #content-box { /* 右侧内容区 */
-            padding: 15px 20px;
-        }
-        .gradio-container {
-            min-height: 100vh;
-        }
-        .h-full {
-            height: 100%;
-        }
-    """) as demo:
+with gr.Blocks(title="严小希") as demo:
     # 状态变量
     username = gr.State("cxxdgc")
     current_page = gr.State(0)
     chat_history = gr.State([])
+    phone_clues_state = gr.State([]) # 当前所有的电话号码线索
+    plate_clues_state = gr.State([]) # 当前所有的车牌号线索
 
     # 自动摘抄的状态变量
     input_text = gr.State("")
@@ -165,7 +133,7 @@ with gr.Blocks(
                         geolocate_button = gr.Button("开始定位")
                         
                         # 设置折叠面板
-                        with gr.Accordion("高级设置", open=False):
+                        with gr.Accordion("高级设置", open=False, visible= False):
                             openai_key_input = gr.Textbox(
                                 label="OpenAI API Key",
                                 type="password",
@@ -189,36 +157,59 @@ with gr.Blocks(
                             
                             # 电话号码线索
                             with gr.Accordion("电话号码线索", open=False):
-                                phone_clues = gr.Dropdown(
-                                    choices=[], 
-                                    label="图中出现的手机号",
-                                    interactive=True,
-                                    multiselect=True,
-                                    info="点击电话号码可以查看归属地信息"
-                                )
-                                phone_location = gr.Textbox(
-                                    label="电话号码归属地",
-                                    lines=1, 
-                                    interactive=False, 
-                                    placeholder="点击号码查看归属地信息..."
-                                )
-                                phone_lookup_btn = gr.Button("查找归属地", size="sm")
+                                with gr.Row():
+                                    phone_clues = gr.Dropdown(
+                                        choices=[], 
+                                        label="图中出现的电话号",
+                                        interactive=True,
+                                        multiselect=True
+                                    )
+                                    # 添加手动输入区域
+                                    manual_phone_input = gr.Textbox(
+                                        label="手动输入电话号",
+                                        placeholder="输入自定义电话号..."
+                                    )
+                                
+                                with gr.Row():
+                                    phone_location = gr.Textbox(
+                                        label="电话号码归属地",
+                                        lines=1, 
+                                        interactive=False, 
+                                        placeholder="点击号码查看归属地信息..."
+                                    )
+                                    # 添加手动添加按钮
+                                    # add_phone_btn = gr.Button("添加号码", size="sm")
+                                with gr.Row():
+                                    phone_lookup_btn = gr.Button("查找归属地", size="sm")
+                                    clear_phone_btn = gr.Button("清空号码", size="sm", variant="stop")
                             
                             # 车牌号线索
                             with gr.Accordion("车牌号线索", open=False):
-                                plate_clues = gr.Dropdown(
-                                    choices=[], 
-                                    label="图中出现的车牌号",
-                                    interactive=True,
-                                    multiselect=True,
-                                )
-                                plate_location = gr.Textbox(
-                                    label="车牌号归属地",
-                                    lines=1, 
-                                    interactive=False, 
-                                    placeholder="点击车牌号查看归属地信息..."
-                                )
-                                plate_lookup_btn = gr.Button("查找归属地", size="sm")
+                                with gr.Row():
+                                    plate_clues = gr.Dropdown(
+                                        choices=[], 
+                                        label="图中出现的车牌号",
+                                        interactive=True,
+                                        multiselect=True,
+                                    )
+                                    # 手动输入区域
+                                    manual_plate_input = gr.Textbox(
+                                        label="手动输入车牌号",
+                                        placeholder="输入自定义车牌号..."
+                                    )
+                                
+                                with gr.Row():
+                                    plate_location = gr.Textbox(
+                                        label="车牌号归属地",
+                                        lines=1, 
+                                        interactive=False, 
+                                        placeholder="点击车牌号查看归属地信息..."
+                                    )
+                                    # 添加手动添加按钮
+                                    # add_plate_btn = gr.Button("添加车牌", size="sm")
+                                with gr.Row():
+                                    plate_lookup_btn = gr.Button("查找归属地", size="sm")
+                                    clear_plate_btn = gr.Button("清空车牌", size="sm", variant="stop")
                             
                             # 其他线索
                             with gr.Accordion("其他线索", open=False):
@@ -256,21 +247,7 @@ with gr.Blocks(
                                 interactive=False, 
                                 placeholder="AI将在这里解释为什么做出这个定位决策..."
                             )
-                        
-                        
-                        
-                        # 示例图片
-                        gr.Examples(
-                            examples=[
-                                ["demo_street1.jpg"],
-                                ["demo_street2.jpg"]
-                            ],
-                            inputs=image_input,
-                            outputs=[map_html, text_output],
-                            fn=None,  # 将使用单独的处理函数
-                            cache_examples=False
-                        )
-            
+
             # 关于严小希页面
             with gr.Column(visible=False, elem_classes="panel") as yan_container:
                 gr.HTML(yan_page_html())
@@ -388,194 +365,63 @@ with gr.Blocks(
         outputs=[text_input_f2, excerpts_display, excerpts_state]
     )
 
-    # 新增街景定位功能函数
-    def geolocate_image(image_path, api_key, model, map_provider):
-        """使用大模型分析图像并获取地理位置"""
-        try:
-            # 如果没有提供OpenAI API Key，使用硅基流动API
-            if not api_key:
-                from ConfigManager import ConfigManager
-                conf = ConfigManager()
-                SILICONFLOW_API_KEY = conf.get_text_model_config().get("api_key", "")
-                SILICONFLOW_API_URL = "https://api.siliconflow.cn/v1/"
-                model_name = conf.get_text_model_config().get("name", "")
-                
-                if not SILICONFLOW_API_KEY:
-                    return None, "⚠️ 错误：未提供API密钥，请设置硅基流动API或提供OpenAI API Key"
-                
-                # 使用硅基流动API
-                headers = {
-                "Authorization": f"Bearer {SILICONFLOW_API_KEY}",
-                "Content-Type": "application/json"
-                }
-                    
-                
-                import base64
-                # 读取并编码图像
-                with open(image_path, "rb") as image_file:
-                    base64_image = base64.b64encode(image_file.read()).decode("utf-8")
-                
-                # 构建请求体
-                payload = {
-                    "model": "THUDM/GLM-4.1V-9B-Thinking",  # 指定视觉模型
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": "详细分析这张街景图像中的所有文字、路标、建筑特征和任何地理标识信息。"
-                                            "并根据这些信息推断可能的地理位置，精确到城市。"
-                                            "同时请识别图像中出现的手机号和车牌号（如果有的话）。"
-                                            "输出格式为JSON: {'location': '国家 城市 具体位置', 'reasoning': '详细的原因解释', 'phone_numbers': ['11111111111', '22222222222'], 'license_plates': ['沪A12345', '京B67890']}"
-                                },
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": f"data:image/jpeg;base64,{base64_image}"
-                                    }
-                                }
-                            ]
-                        }
-                    ],
-                    "max_tokens": 800
-                }
-                import requests
-                # 发送请求
-                response = requests.post(
-                    f"{SILICONFLOW_API_URL}chat/completions",
-                    headers=headers,
-                    json=payload
-                )
-                
-                # 检查响应状态
-                if response.status_code != 200:
-                    error_msg = f"API请求失败: {response.status_code} - {response.text}"
-                    logger.error(error_msg)
-                    return None, f"⚠️ API错误: {error_msg}"
-                
-                # 解析响应
-                result = response.json()
-                if "choices" not in result or not result["choices"]:
-                    return None, "⚠️ API未返回有效结果"
-                
-                # 提取模型输出
-                content = result["choices"][0]["message"]["content"]
-                print(content)
-                # 尝试解析为JSON
-                try:
-                    # 提取JSON部分（去除多余文本）
-                    start_idx = content.find('{')
-                    end_idx = content.rfind('}') + 1
-                    json_content = content[start_idx:end_idx]
-                    
-                    data = json.loads(json_content)
-                    
-                    location = data.get('location', '未知位置')
-                    reasoning = data.get('reasoning', '没有提供分析原因')
-                    phone_numbers = data.get('phone_numbers', [])
-                    license_plates = data.get('license_plates', [])
-                except Exception as e:
-                    logger.error(f"JSON解析错误: {str(e)}")
-                    logger.info(f"原始响应内容: {content}")
-                    
-                    # 尝试直接提取位置
-                    if "," in content:
-                        country, city, *location_parts = content.split(",", 2)
-                        location = f"{country.strip()}{city.strip()}"
-                    else:
-                        location = content
-                    
-                    reasoning = "无法解析AI的分析结果"
-                    phone_numbers = []
-                    license_plates = []
-
-            else:
-                location = "暂不支持openai大模型"
-                reasoning = ""
-                phone_numbers = []
-                license_plates = []
-            
-            # 根据地图提供商生成地图预览
-            map_html = f"""
-            <iframe src="https://map.qq.com/?type=poi&what={location}"
-                    width="800" height="400" frameborder="0" style="border:0;"></iframe>
-            <p style="text-align:center;margin-top:10px;color:#666;">{location}</p>
-            """
-            
-            return map_html, location, reasoning, phone_numbers, license_plates
-        
-        except Exception as e:
-            logger.error(f"地理定位失败: {str(e)}")
-            error_message = f"⚠️ 处理失败: {str(e)}"
-            if "Unauthorized" in str(e):
-                error_message = "⚠️ API密钥无效，请检查API Key"
-            elif "rate limit" in str(e).lower():
-                error_message = "⚠️ 超出API调用限制，请稍后再试"
-            return None, error_message, "", [], []
-
-    # 查找电话号码归属地的函数
-    def lookup_phone_location(phone_number):
-        """查找电话号码归属地（模拟功能）"""
-        # 在真实应用中，这里应调用归属地查询API
-        prefix = phone_number[:3]
-        if prefix == '130':
-            return f"{phone_number} - 中国联通 - 北京"
-        elif prefix == '138':
-            return f"{phone_number} - 中国移动 - 上海"
-        elif prefix == '189':
-            return f"{phone_number} - 中国电信 - 广州"
-        else:
-            return f"{phone_number} - 归属地未知"
-
-    # 查找车牌号归属地的函数
-    def lookup_plate_location(plate_number):
-        """查找车牌号归属地（模拟功能）"""
-        # 在真实应用中，这里应调用车牌归属查询API
-        if plate_number.startswith('京'):
-            return f"{plate_number} - 北京市"
-        elif plate_number.startswith('沪'):
-            return f"{plate_number} - 上海市"
-        elif plate_number.startswith('粤'):
-            return f"{plate_number} - 广东省"
-        else:
-            return f"{plate_number} - 归属地未知"
-
-    # 街景定位按钮的事件
-    def process_geolocation(image_path, openai_key, model, map_provider):
-        # 显示加载状态
-        yield gr.update(visible=True), None, gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
-        
-        # 处理图像
-        map_html, location, reasoning, phone_numbers, license_plates = geolocate_image(image_path, openai_key, model, map_provider)
-        
-        # 格式化线索展示
-        phone_options = [f"{phone} (点击查看)" for phone in phone_numbers] if phone_numbers else ["未识别到电话号码"]
-        plate_options = [f"{plate} (点击查看)" for plate in license_plates] if license_plates else ["未识别到车牌号"]
-        
-        # 隐藏加载状态
-        yield gr.update(visible=False), map_html, gr.update(value=location), gr.update(value=reasoning), \
-            gr.update(choices=phone_options, value=[]), \
-            gr.update(choices=plate_options, value=[]), \
-            gr.update(interactive=True)
-
+    
+    # 地理位置定位相关函数
+    import grolocate
     geolocate_button.click(
-        process_geolocation,
+        grolocate.process_geolocation,
         inputs=[image_input, openai_key_input, openai_model, map_provider],
         outputs=[loading_overlay_geo, map_html, text_output, reasoning_output, phone_clues, plate_clues, other_clues]
+    )
+
+    
+    # 添加线索按钮事件
+    # add_phone_btn.click(
+    #     grolocate.add_custom_clue,
+    #     inputs=[manual_phone_input, phone_clues_state],
+    #     outputs=[phone_clues_state, phone_clues]
+    # ).then(
+    #     lambda: "",  # 清空输入框
+    #     outputs=[manual_phone_input]
+    # )
+
+    # add_plate_btn.click(
+    #     grolocate.add_custom_clue,
+    #     inputs=[manual_plate_input, plate_clues_state],
+    #     outputs=[plate_clues_state, plate_clues]
+    # ).then(
+    #     lambda: "",  # 清空输入框
+    #     outputs=[manual_plate_input]
+    # )
+
+    # 清空线索按钮事件
+    clear_phone_btn.click(
+        grolocate.clear_clues,
+        outputs=[phone_clues_state, phone_clues]
+    )
+
+    clear_plate_btn.click(
+        grolocate.clear_clues,
+        outputs=[plate_clues_state, plate_clues]
     )
     
     # 电话号码线索点击事件
     phone_lookup_btn.click(
-        lambda phone_options: lookup_phone_location(phone_options[0].split(" ")[0]) if phone_options and "未识别" not in phone_options[0] else "请选择有效的电话号码",
-        inputs=[phone_clues],
+        lambda manual_phone, phone_options: 
+            grolocate.lookup_phone_location(manual_phone.strip()) if manual_phone.strip() 
+            else grolocate.lookup_phone_location(phone_options[0].split(" ")[0]) if phone_options and "未识别" not in phone_options[0] 
+            else "请输入或选择有效的电话号码",
+        inputs=[manual_phone_input, phone_clues],
         outputs=phone_location
     )
     
     # 车牌号线索点击事件
     plate_lookup_btn.click(
-        lambda plate_options: lookup_plate_location(plate_options[0].split(" ")[0]) if plate_options and "未识别" not in plate_options[0] else "请选择有效的车牌号",
-        inputs=[plate_clues],
+        lambda manual_plate, plate_options: 
+            grolocate.lookup_plate_location(manual_plate.strip()) if manual_plate.strip() 
+            else grolocate.lookup_plate_location(plate_options[0].split(" ")[0]) if plate_options and "未识别" not in plate_options[0] 
+            else "请输入或选择有效的车牌号",
+        inputs=[manual_plate_input, plate_clues],
         outputs=plate_location
     )
     
