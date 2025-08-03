@@ -48,7 +48,7 @@ def geolocate_image(image_path, api_key, model, map_provider):
                                 "type": "text",
                                 "text": "详细分析这张街景图像中的所有文字、路标、建筑特征和任何地理标识信息。"
                                         "并根据这些信息推断可能的地理位置，精确到城市。"
-                                        "同时请识别图像中出现的手机号和车牌号（如果有的话）。"
+                                        "同时请识别图像中出现的电话号和车牌号（如果有的话）。"
                                         "输出格式为JSON: {'location': '国家 城市 具体位置', 'reasoning': '详细的原因解释', 'phone_numbers': ['11111111111', '22222222222'], 'license_plates': ['沪A12345', '京B67890']}"
                             },
                             {
@@ -139,6 +139,13 @@ def geolocate_image(image_path, api_key, model, map_provider):
 # 查找电话号码归属地的函数
 import requests
 def lookup_phone_location(phone_number):
+    i = 0
+    while (i < len(phone_number)):
+        if (ord(phone_number[i])>= ord("0") and ord(phone_number[i])<= ord("9")):
+            i+=1
+        else:
+            phone_number = phone_number[0:i] + phone_number[(i+1):]
+
     """通过360API查询电话号码归属地"""
     # 构建API请求URL
     url = f"https://cx.shouji.360.cn/phonearea.php?number={phone_number}"

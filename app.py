@@ -29,7 +29,7 @@ def yan_page_html():
     return Yanxx_Page()
 
 # 创建 Gradio 界面
-with gr.Blocks(title="严小希") as demo:
+with gr.Blocks(title="Python语言与人工智能应用大作业-严小希的工作间") as demo:
     # 状态变量
     username = gr.State("cxxdgc")
     current_page = gr.State(0)
@@ -48,7 +48,7 @@ with gr.Blocks(title="严小希") as demo:
             with gr.Column(elem_classes="panel", variant="panel"):
                 gr.Markdown("### 导航菜单")
                 home_btn = gr.Button("首页", size="sm", variant="primary")
-                feature1_btn = gr.Button("自动批注", size="sm")
+                feature1_btn = gr.Button("自动批注", size="sm",visible=False)
                 feature2_btn = gr.Button("自动摘抄", size="sm")
                 geolocate_btn = gr.Button("街景定位", size="sm")
                 yan_btn = gr.Button("关于严小希", size="sm")
