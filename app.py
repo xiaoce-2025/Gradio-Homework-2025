@@ -12,6 +12,7 @@ import json
 import html
 from openai import OpenAI
 from paddleocr import PaddleOCR
+import requests  # 新增requests用于API调用
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,12 +22,56 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
-
 # 关于严小希的HTML内容
 from YanxxPage import Yanxx_Page
 def yan_page_html():
     return Yanxx_Page()
+
+# 语音合成函数
+def text_to_speech(text):
+    from ConfigManager import ConfigManager
+    """将文本转换为语音并返回音频文件路径"""    
+    conf = ConfigManager()
+    api_key = conf.get_text_model_config().get("api_key", "")
+    if not api_key or not text:
+        logger.warning("API密钥或文本为空，无法生成语音")
+        return None
+    
+    try:
+        # 清理文本中的特殊标记
+        clean_text = re.sub(r'\([^)]*\)', '', text)
+        
+        # 准备请求硅基流动API
+        payload = {
+            "model": "FunAudioLLM/CosyVoice2-0.5B",
+            "input": clean_text,
+            "voice": "FunAudioLLM/CosyVoice2-0.5B:diana"
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # 请求语音合成
+        response = requests.post(
+            "https://api.siliconflow.cn/v1/audio/speech", 
+            json=payload, 
+            headers=headers,
+            timeout=60  # 增加超时时间
+        )
+        response.raise_for_status()
+        
+        # 创建临时音频文件
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
+            f.write(response.content)
+            audio_file_path = f.name
+            logger.info(f"语音合成成功，保存到: {audio_file_path}")
+        
+        return audio_file_path
+    except Exception as e:
+        logger.error(f"语音合成失败: {str(e)}")
+        return None
 
 # 创建 Gradio 界面
 with gr.Blocks(title="Python语言与人工智能应用大作业-严小希的工作间") as demo:
@@ -36,6 +81,7 @@ with gr.Blocks(title="Python语言与人工智能应用大作业-严小希的工
     chat_history = gr.State([])
     phone_clues_state = gr.State([]) # 当前所有的电话号码线索
     plate_clues_state = gr.State([]) # 当前所有的车牌号线索
+    current_audio_file = gr.State(None)  # 当前语音文件路径
 
     # 自动摘抄的状态变量
     input_text = gr.State("")
@@ -68,10 +114,21 @@ with gr.Blocks(title="Python语言与人工智能应用大作业-严小希的工
                 
                 chatbot = gr.Chatbot(height=500, label="严小希对话")
                 msg = gr.Textbox(label="请输入消息", placeholder="输入您的对话后按Enter发送...")
+                
+                # 新增语音输出功能
                 with gr.Row():
-                    clear_btn = gr.Button("清空对话")
-                    file_upload = gr.UploadButton("📁 上传文件", file_types=["text", ".json", ".pdf", ".docx"])
-                file_output = gr.Markdown()
+                    with gr.Column(scale=4):
+                        with gr.Row():
+                            clear_btn = gr.Button("清空对话")
+                            file_upload = gr.UploadButton("📁 上传文件", file_types=["text", ".json", ".pdf", ".docx"])
+                        with gr.Row():
+                            # 语音输出按钮
+                            voice_output_btn = gr.Button("🔊 语音输出", size="sm")
+                    with gr.Column(scale=1):
+                        # 语音输出状态指示器
+                        voice_status = gr.Textbox(label="语音状态", interactive=False, placeholder="准备中...", visible=False)
+                # 语音播放器
+                audio_player = gr.Audio(label="严小希语音", type="filepath", visible=False)
             
             # 自动批注页面
             with gr.Column(visible=False, elem_classes="panel") as feature1_container:
@@ -289,11 +346,22 @@ with gr.Blocks(title="Python语言与人工智能应用大作业-严小希的工
         lambda: [[], []],
         outputs=[chatbot, chat_history]
     )
-    
-    file_upload.upload(
-        lambda file: f"已收到文件: {file.name}",
-        inputs=[file_upload],
-        outputs=file_output
+
+    # 语音输出按钮的点击事件
+    voice_output_btn.click(
+        # 首先显示加载状态
+        lambda: [gr.update(visible=True), gr.update(value="正在生成语音...")],
+        outputs=[audio_player, voice_status]
+    ).then(
+        # 获取最近一条回复并生成语音
+        lambda chat_history: [
+            text_to_speech(
+                chat_history[-1][1] if chat_history else "你好呀，我是严小希~"),
+            gr.update(visible=True),
+            gr.update(value="语音已生成，点击播放按钮收听")
+        ],
+        inputs=[chat_history],  # 需要添加settings_state变量
+        outputs=[audio_player, audio_player, voice_status]
     )
     
     # 批注页面的事件

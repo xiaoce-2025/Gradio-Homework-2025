@@ -6,7 +6,7 @@ from ConfigManager import ConfigManager
 conf = ConfigManager()
 SILICONFLOW_API_KEY = conf.get_text_model_config()["api_key"]
 SILICONFLOW_API_URL = "https://api.siliconflow.cn/v1/chat/completions"
-MODEL_NAME = conf.get_text_model_config()["name"]
+MODEL_NAME = "deepseek-ai/DeepSeek-V3"
 
 from Yanxxdatabase import YanxxDataBase
 
