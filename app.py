@@ -98,7 +98,7 @@ with gr.Blocks(title="Python语言与人工智能应用大作业-严小希的工
                 feature2_btn = gr.Button("自动摘抄", size="sm")
                 geolocate_btn = gr.Button("街景定位", size="sm")
                 yan_btn = gr.Button("关于严小希", size="sm")
-                settings_btn = gr.Button("设置", size="sm")
+                settings_btn = gr.Button("设置", size="sm",visible=False)
                 
                 gr.Markdown("---")
                 gr.Markdown(f"**用户**: cxxdgc")
@@ -500,7 +500,12 @@ with gr.Blocks(title="Python语言与人工智能应用大作业-严小希的工
     yan_btn.click(lambda: [3, *show_page(3)], outputs=[current_page, home_container, feature1_container, feature2_container, yan_container, settings_container, geolocate_container])
     settings_btn.click(lambda: [4, *show_page(4)], outputs=[current_page, home_container, feature1_container, feature2_container, yan_container, settings_container, geolocate_container])
     geolocate_btn.click(lambda: [5, *show_page(5)], outputs=[current_page, home_container, feature1_container, feature2_container, yan_container, settings_container, geolocate_container])
+    
     # 登出事件
+    def logout():
+        raise gr.Error("当前为测试版demo，用户系统暂未开放！")   
+    logout_btn.click(logout,outputs=None)
+
     
     # 初始加载显示首页
     demo.load(lambda: [gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)],
